@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.microservices.menu.dtos.MenuDtos;
 import com.microservices.menu.entity.MenuCategory;
 import com.microservices.menu.entity.MenuItem;
+import com.microservices.menu.exception.ResourceNotFoundException;
 import com.microservices.menu.repository.MenuCategoryRepository;
 import com.microservices.menu.repository.MenuItemRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -206,12 +207,12 @@ public class MenuServiceImpl implements MenuService {
 
     private MenuItem findItemOrThrow(String id) {
         return menuItemRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Menu item not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Menu item not found: " + id));
     }
 
     private MenuCategory findCategoryOrThrow(String id) {
         return menuCategoryRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found: " + id));
     }
 
     private MenuCategory resolveCategory(String categoryId) {

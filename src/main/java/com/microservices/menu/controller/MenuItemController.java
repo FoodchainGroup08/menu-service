@@ -16,6 +16,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import jakarta.validation.Valid;
 import org.springframework.web.server.ResponseStatusException;
 
 @Slf4j
@@ -78,9 +80,9 @@ public class MenuItemController {
     })
     @PostMapping
     public ResponseEntity<MenuDtos.MenuItemResponse> createItem(
-            @RequestBody  MenuDtos.CreateMenuItemRequest request,
-            @Parameter(hidden = true) @RequestHeader("X-User-Id")   String userId,
-            @Parameter(hidden = true) @RequestHeader("X-User-Role") String userRole) {
+            @Valid @RequestBody  MenuDtos.CreateMenuItemRequest request,
+            @Parameter(description = "Caller's user UUID — injected by the API Gateway from the JWT. When testing directly on Swagger, paste your user UUID here.", example = "00000000-0000-0000-0000-000000000001") @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @Parameter(description = "Caller's role — injected by the API Gateway from the JWT. When testing directly on Swagger, enter HEAD_OFFICE_ADMIN for admin access.", example = "HEAD_OFFICE_ADMIN") @RequestHeader(value = "X-User-Role", required = false) String userRole) {
         log.info("POST /menu/items userId={} role={}", userId, userRole);
         assertAdmin(userRole);
         return ResponseEntity.status(HttpStatus.CREATED).body(menuService.createMenuItem(request));
@@ -101,9 +103,9 @@ public class MenuItemController {
     public ResponseEntity<MenuDtos.MenuItemResponse> updateItem(
             @Parameter(description = "UUID of the menu item to update", required = true)
             @PathVariable String id,
-            @RequestBody  MenuDtos.UpdateMenuItemRequest request,
-            @Parameter(hidden = true) @RequestHeader("X-User-Id")   String userId,
-            @Parameter(hidden = true) @RequestHeader("X-User-Role") String userRole) {
+            @Valid @RequestBody  MenuDtos.UpdateMenuItemRequest request,
+            @Parameter(description = "Caller's user UUID — injected by the API Gateway from the JWT. When testing directly on Swagger, paste your user UUID here.", example = "00000000-0000-0000-0000-000000000001") @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @Parameter(description = "Caller's role — injected by the API Gateway from the JWT. When testing directly on Swagger, enter HEAD_OFFICE_ADMIN for admin access.", example = "HEAD_OFFICE_ADMIN") @RequestHeader(value = "X-User-Role", required = false) String userRole) {
         log.info("PUT /menu/items/{} userId={} role={}", id, userId, userRole);
         assertAdmin(userRole);
         return ResponseEntity.ok(menuService.updateMenuItem(id, request));
@@ -124,7 +126,7 @@ public class MenuItemController {
     public ResponseEntity<MenuDtos.MenuItemResponse> activate(
             @Parameter(description = "UUID of the menu item", required = true)
             @PathVariable String id,
-            @Parameter(hidden = true) @RequestHeader("X-User-Role") String userRole) {
+            @Parameter(description = "Caller's role — injected by the API Gateway from the JWT. When testing directly on Swagger, enter HEAD_OFFICE_ADMIN for admin access.", example = "HEAD_OFFICE_ADMIN") @RequestHeader(value = "X-User-Role", required = false) String userRole) {
         assertAdmin(userRole);
         return ResponseEntity.ok(menuService.setItemActive(id, true));
     }
@@ -144,7 +146,7 @@ public class MenuItemController {
     public ResponseEntity<MenuDtos.MenuItemResponse> deactivate(
             @Parameter(description = "UUID of the menu item", required = true)
             @PathVariable String id,
-            @Parameter(hidden = true) @RequestHeader("X-User-Role") String userRole) {
+            @Parameter(description = "Caller's role — injected by the API Gateway from the JWT. When testing directly on Swagger, enter HEAD_OFFICE_ADMIN for admin access.", example = "HEAD_OFFICE_ADMIN") @RequestHeader(value = "X-User-Role", required = false) String userRole) {
         assertAdmin(userRole);
         return ResponseEntity.ok(menuService.setItemActive(id, false));
     }
@@ -164,7 +166,7 @@ public class MenuItemController {
     public ResponseEntity<MenuDtos.MenuItemResponse> toggle(
             @Parameter(description = "UUID of the menu item", required = true)
             @PathVariable String id,
-            @Parameter(hidden = true) @RequestHeader("X-User-Role") String userRole) {
+            @Parameter(description = "Caller's role — injected by the API Gateway from the JWT. When testing directly on Swagger, enter HEAD_OFFICE_ADMIN for admin access.", example = "HEAD_OFFICE_ADMIN") @RequestHeader(value = "X-User-Role", required = false) String userRole) {
         assertAdmin(userRole);
         return ResponseEntity.ok(menuService.toggleItemActive(id));
     }
@@ -184,8 +186,8 @@ public class MenuItemController {
     public ResponseEntity<Void> deleteItem(
             @Parameter(description = "UUID of the menu item to delete", required = true)
             @PathVariable String id,
-            @Parameter(hidden = true) @RequestHeader("X-User-Id")   String userId,
-            @Parameter(hidden = true) @RequestHeader("X-User-Role") String userRole) {
+            @Parameter(description = "Caller's user UUID — injected by the API Gateway from the JWT. When testing directly on Swagger, paste your user UUID here.", example = "00000000-0000-0000-0000-000000000001") @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @Parameter(description = "Caller's role — injected by the API Gateway from the JWT. When testing directly on Swagger, enter HEAD_OFFICE_ADMIN for admin access.", example = "HEAD_OFFICE_ADMIN") @RequestHeader(value = "X-User-Role", required = false) String userRole) {
         log.info("DELETE /menu/items/{} userId={} role={}", id, userId, userRole);
         assertAdmin(userRole);
         menuService.deleteMenuItem(id);
@@ -195,8 +197,12 @@ public class MenuItemController {
     // ── Helper ────────────────────────────────────────────────────────────────
 
     private void assertAdmin(String userRole) {
-        if (!"OFFICE_ADMIN".equals(userRole)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only OFFICE_ADMIN can perform this action");
+        if (userRole == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                    "Authentication required — add X-User-Role header (value: HEAD_OFFICE_ADMIN)");
+        }
+        if (!"OFFICE_ADMIN".equals(userRole) && !"HEAD_OFFICE_ADMIN".equals(userRole)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Insufficient role to perform this action");
         }
     }
 }
