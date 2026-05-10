@@ -90,8 +90,8 @@ public class MenuCategoryController {
     // ── Helper ────────────────────────────────────────────────────────────────
 
     private void assertAdmin(String userRole) {
-        if (!"OFFICE_ADMIN".equals(userRole)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only OFFICE_ADMIN can perform this action");
+        if (!"HEAD_OFFICE_ADMIN".equals(userRole)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only HEAD_OFFICE_ADMIN can perform this action");
         }
     }
 }

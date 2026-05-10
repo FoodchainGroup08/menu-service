@@ -134,7 +134,7 @@ class MenuItemControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req))
                         .header("X-User-Id",   "user-1")
-                        .header("X-User-Role", "OFFICE_ADMIN"))
+                        .header("X-User-Role", "HEAD_OFFICE_ADMIN"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value("item-1"))
                 .andExpect(jsonPath("$.name").value("Jollof Rice"));
@@ -168,7 +168,7 @@ class MenuItemControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req))
                         .header("X-User-Id",   "user-1")
-                        .header("X-User-Role", "OFFICE_ADMIN"))
+                        .header("X-User-Role", "HEAD_OFFICE_ADMIN"))
                 .andExpect(status().isOk());
 
         verify(menuService).updateMenuItem(eq("item-1"), any());
@@ -184,7 +184,7 @@ class MenuItemControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req))
                         .header("X-User-Id",   "user-1")
-                        .header("X-User-Role", "OFFICE_ADMIN"))
+                        .header("X-User-Role", "HEAD_OFFICE_ADMIN"))
                 .andExpect(status().isNotFound());
     }
 
@@ -207,7 +207,7 @@ class MenuItemControllerTest {
         when(menuService.setItemActive("item-1", true)).thenReturn(response(true));
 
         mockMvc.perform(patch("/menu/items/item-1/activate")
-                        .header("X-User-Role", "OFFICE_ADMIN"))
+                        .header("X-User-Role", "HEAD_OFFICE_ADMIN"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.active").value(true));
     }
@@ -228,7 +228,7 @@ class MenuItemControllerTest {
         when(menuService.setItemActive("item-1", false)).thenReturn(response(false));
 
         mockMvc.perform(patch("/menu/items/item-1/deactivate")
-                        .header("X-User-Role", "OFFICE_ADMIN"))
+                        .header("X-User-Role", "HEAD_OFFICE_ADMIN"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.active").value(false));
     }
@@ -247,7 +247,7 @@ class MenuItemControllerTest {
         when(menuService.toggleItemActive("item-1")).thenReturn(response(false));
 
         mockMvc.perform(patch("/menu/items/item-1/toggle")
-                        .header("X-User-Role", "OFFICE_ADMIN"))
+                        .header("X-User-Role", "HEAD_OFFICE_ADMIN"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.active").value(false));
 
@@ -260,7 +260,7 @@ class MenuItemControllerTest {
                 .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Menu item not found: bad-id"));
 
         mockMvc.perform(patch("/menu/items/bad-id/toggle")
-                        .header("X-User-Role", "OFFICE_ADMIN"))
+                        .header("X-User-Role", "HEAD_OFFICE_ADMIN"))
                 .andExpect(status().isNotFound());
     }
 
@@ -281,7 +281,7 @@ class MenuItemControllerTest {
 
         mockMvc.perform(delete("/menu/items/item-1")
                         .header("X-User-Id",   "user-1")
-                        .header("X-User-Role", "OFFICE_ADMIN"))
+                        .header("X-User-Role", "HEAD_OFFICE_ADMIN"))
                 .andExpect(status().isNoContent());
 
         verify(menuService).deleteMenuItem("item-1");
@@ -294,7 +294,7 @@ class MenuItemControllerTest {
 
         mockMvc.perform(delete("/menu/items/bad-id")
                         .header("X-User-Id",   "user-1")
-                        .header("X-User-Role", "OFFICE_ADMIN"))
+                        .header("X-User-Role", "HEAD_OFFICE_ADMIN"))
                 .andExpect(status().isNotFound());
     }
 

@@ -115,7 +115,7 @@ class MenuCategoryControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req))
                         .header("X-User-Id",   "user-1")
-                        .header("X-User-Role", "OFFICE_ADMIN"))
+                        .header("X-User-Role", "HEAD_OFFICE_ADMIN"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value("cat-3"))
                 .andExpect(jsonPath("$.name").value("Grills"))
@@ -151,7 +151,7 @@ class MenuCategoryControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req))
                         .header("X-User-Id",   "user-1")
-                        .header("X-User-Role", "OFFICE_ADMIN"))
+                        .header("X-User-Role", "HEAD_OFFICE_ADMIN"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Updated Mains"))
                 .andExpect(jsonPath("$.displayOrder").value(10));
@@ -169,7 +169,7 @@ class MenuCategoryControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req))
                         .header("X-User-Id",   "user-1")
-                        .header("X-User-Role", "OFFICE_ADMIN"))
+                        .header("X-User-Role", "HEAD_OFFICE_ADMIN"))
                 .andExpect(status().isNotFound());
     }
 
@@ -197,7 +197,7 @@ class MenuCategoryControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req))
                         .header("X-User-Id",   "user-1")
-                        .header("X-User-Role", "OFFICE_ADMIN"))
+                        .header("X-User-Role", "HEAD_OFFICE_ADMIN"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Soups Only"));
     }
