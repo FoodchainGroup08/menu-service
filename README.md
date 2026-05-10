@@ -1,167 +1,115 @@
 # menu-service
 
-Spring Boot microservice that manages the FoodChain menu catalogue — categories and individual menu items. It serves both an internal admin API (used by office staff) and a public-facing branch menu endpoint (used by the frontend ordering flow).
+Spring Boot microservice that manages the FoodChain menu catalogue — categories and menu items. It exposes an internal admin API (catalogue CRUD) and a branch-scoped menu feed used by the ordering flow.
 
-## Port
+## Port and base URL
 
-| Environment | Port |
-|-------------|------|
-| Local / Docker | **8082** |
+| Item | Value |
+|------|--------|
+| **HTTP port** | **8082** (`application.yml`; override with `SERVER_PORT`) |
+| **Context path** | `/api` |
 
-Base path: `/api` (configured via `server.servlet.context-path`)
+Direct base URL: `http://localhost:8082/api`
 
-Full local base URL: `http://localhost:8082/api`
+### Via API Gateway (recommended for apps)
+
+Use **`http://localhost:8080`** as the host. REST paths are prefixed with **`/api/v1/...`** (for example `GET /api/v1/menu/items`). The gateway requires **`Authorization: Bearer`** for almost every route; the only anonymous **GET** APIs are the paginated branch list and **`GET /api/v1/branches/nearby`**. Menu reads therefore require a JWT when called through the gateway, even though this service does not enforce Spring Security on read endpoints itself.
 
 ---
 
 ## Endpoints
 
-### Branch Menu (Frontend)
+Paths below are relative to **`/api`** on this service. Clients using the gateway call **`http://localhost:8080/api/v1/menu/...`** (see **api-gateway** route table).
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| `GET` | `/menu/branch/{branchId}` | None | Returns all **active** menu items for the branch |
+### Branch menu (ordering UI)
 
-**Important notes on field names:**
-- Response uses `price` (not `basePrice`), `available` (not `active`), and `category` as a plain string name (not an object or ID).
-- The `image` field is an alias for `imageUrl` — both are present in the response for compatibility.
-- Since the menu catalogue is shared across branches, `branchId` is accepted and logged but currently returns all active items. Branch-specific filtering is reserved for a future release.
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/menu/branch/{branchId}` | Active menu items for ordering (simplified DTO: `price`, `category` name string, `available`, etc.) |
 
-**Response shape (array):**
-```json
-[
-  {
-    "id": "3fa85f64-...",
-    "name": "Jollof Rice",
-    "description": "Nigerian classic slow-cooked rice",
-    "price": 1500.00,
-    "category": "Mains",
-    "available": true,
-    "isActive": true,
-    "imageUrl": "https://cdn.example.com/jollof.jpg",
-    "image":    "https://cdn.example.com/jollof.jpg"
-  }
-]
-```
+The catalogue is shared across branches; `branchId` is accepted for future filtering but currently returns all active items.
 
 ---
 
-### Menu Items
+### Menu items — `/v1/menu/items`
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| `GET` | `/menu/items` | None | Paginated list — filter by `categoryId`, `active`, `page`, `size` |
-| `GET` | `/menu/items/{id}` | None | Full item detail (Redis cached, 10 min TTL) |
-| `POST` | `/menu/items` | `OFFICE_ADMIN` | Create a new menu item |
-| `PUT` | `/menu/items/{id}` | `OFFICE_ADMIN` | Partial update (only supplied fields are changed) |
-| `PATCH` | `/menu/items/{id}/activate` | `OFFICE_ADMIN` | Set `active = true` |
-| `PATCH` | `/menu/items/{id}/deactivate` | `OFFICE_ADMIN` | Set `active = false` |
-| `PATCH` | `/menu/items/{id}/toggle` | `OFFICE_ADMIN` | Flip active state |
-| `DELETE` | `/menu/items/{id}` | `OFFICE_ADMIN` | Permanently delete item |
+| Method | Path | Admin (`X-User-Role`) | Description |
+|--------|------|----------------------|-------------|
+| `GET` | `/v1/menu/items` | — | Paginated list (`categoryId`, `active`, `page`, `size`) |
+| `GET` | `/v1/menu/items/{id}` | — | Detail (Redis cached, 10 min TTL) |
+| `POST` | `/v1/menu/items` | **HEAD_OFFICE_ADMIN**, **OFFICE_ADMIN**, or **Admin** (case-insensitive) | Create item |
+| `PUT` | `/v1/menu/items/{id}` | same | Partial update |
+| `PATCH` | `/v1/menu/items/{id}/activate` | same | Set active |
+| `PATCH` | `/v1/menu/items/{id}/deactivate` | same | Set inactive |
+| `PATCH` | `/v1/menu/items/{id}/toggle` | same | Toggle active |
+| `DELETE` | `/v1/menu/items/{id}` | same | Delete item (**200** with JSON body on success) |
 
-Auth is enforced via the `X-User-Role` header (injected by the API Gateway). Write operations require `OFFICE_ADMIN`.
+Write operations read **`X-User-Role`** (and **`X-User-Id`**) injected by the API gateway after JWT validation. When calling this service **directly** (Swagger on `:8082`), supply those headers manually for admin actions.
 
-**MenuItemResponse fields:** `id`, `name`, `description`, `categoryId`, `categoryName`, `basePrice`, `imageUrl`, `active`, `createdAt`, `updatedAt`
+**JSON body:** Create/update requests accept **`price`** in JSON (OpenAPI name); **`basePrice`** is accepted as an alias (`@JsonAlias`).
+
+**Duplicate names:** Creating or renaming an item to a name that already exists (case-insensitive) returns **409 Conflict**.
+
+**Response fields (`MenuItemResponse`):** includes `basePrice`, `categoryId`, `categoryName`, etc.
 
 ---
 
-### Menu Categories
+### Categories — `/v1/menu/categories`
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| `GET` | `/menu/categories` | None | List active categories (full objects, Redis cached) |
-| `GET` | `/menu/categories?namesOnly=true` | None | List active category names as `string[]` (frontend-compatible) |
-| `POST` | `/menu/categories` | `OFFICE_ADMIN` | Create a category |
-| `PUT` | `/menu/categories/{id}` | `OFFICE_ADMIN` | Partial update |
-
-**CategoryResponse fields:** `id`, `name`, `displayOrder`, `active`
+| Method | Path | Admin | Description |
+|--------|------|-------|-------------|
+| `GET` | `/v1/menu/categories` | — | Active categories (cached) |
+| `GET` | `/v1/menu/categories?namesOnly=true` | — | Category names as `string[]` |
+| `POST` | `/v1/menu/categories` | admin roles above | Create |
+| `PUT` | `/v1/menu/categories/{id}` | admin roles above | Partial update |
 
 ---
 
 ## Caching (Redis)
 
-| Cache key | Content | TTL |
-|-----------|---------|-----|
-| `menu:item:{id}` | `MenuItemResponse` JSON | 10 min |
-| `menu:categories` | `List<CategoryResponse>` JSON | 10 min |
+| Key | TTL |
+|-----|-----|
+| `menu:item:{id}` | 10 min |
+| `menu:categories` | 10 min |
 
-Cache is evicted on every write operation (create / update / delete / activate / deactivate). Redis failures are caught and logged — the service degrades gracefully to direct DB reads.
-
----
-
-## Kafka Events
-
-Topic: **`menu-item-events`**
-
-| Event type | Trigger |
-|------------|---------|
-| `CREATED` | Item created |
-| `UPDATED` | Item updated |
-| `ACTIVATED` | Item activated |
-| `DEACTIVATED` | Item deactivated |
-| `DELETED` | Item deleted |
-
-Event payload:
-```json
-{
-  "menuItemId": "3fa85f64-...",
-  "name": "Jollof Rice",
-  "basePrice": 1500.00,
-  "active": true,
-  "eventType": "CREATED"
-}
-```
-
-Kafka publish failures are caught and logged — they do not roll back the database transaction.
+Writes invalidate relevant cache entries. Redis failures are logged; reads fall back to the database.
 
 ---
 
-## Environment Variables
+## Kafka
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `RDS_ENDPOINT` | `localhost` | MySQL host |
-| `RDS_PORT` | `3306` | MySQL port |
-| `RDS_USERNAME` | `root` | MySQL username |
-| `RDS_PASSWORD` | `password` | MySQL password |
-| `REDIS_HOST` | `localhost` | Redis host |
-| `KAFKA_BOOTSTRAP_SERVERS` | `localhost:29092` | Kafka broker(s) |
-
-Config server: `http://localhost:8888` (optional — service starts without it).
+**Topic:** `menu-item-events` — published on create/update/activate/deactivate/delete (`CREATED`, `UPDATED`, …). Payload uses `basePrice` and `eventType`. Publish failures are logged and do not roll back DB commits.
 
 ---
 
-## Running Locally
+## Configuration highlights
 
-### Prerequisites
-- Java 17+
-- MySQL database `menu_db`
-- Redis (default port 6379)
-- Kafka broker (optional — publish errors are swallowed)
+| Variable | Typical default | Purpose |
+|----------|-----------------|--------|
+| `RDS_ENDPOINT`, `RDS_PORT`, `RDS_USERNAME`, `RDS_PASSWORD` | localhost / 3306 / root | MySQL (`menu_db`) |
+| `REDIS_HOST` | localhost | Redis |
+| `KAFKA_BOOTSTRAP_SERVERS` | `localhost:29092` in local `application.yml` | Kafka producers |
 
-### With Maven
+Optional Config Server: `optional:configserver:http://localhost:8888`.
+
+---
+
+## Running locally
+
+Prerequisites: Java 17+, MySQL `menu_db`, Redis, Kafka (optional for dev if you tolerate publish errors).
+
 ```bash
 cd menu-service
 ./mvnw spring-boot:run
 ```
 
-### With Docker Compose (full stack)
-```bash
-cd foodchain-deployment
-docker-compose up menu-service
-```
+Tests use H2 and mocks — `./mvnw test`.
 
-### Tests
-```bash
-./mvnw test
-```
-
-Tests use an in-memory H2 database and Mockito mocks for Redis and Kafka — no external services required.
+Docker Compose (from `foodchain-deployment`): `docker-compose up menu-service`.
 
 ---
 
-## Swagger UI
+## Swagger
 
-Available at: `http://localhost:8082/api/swagger-ui.html`
-
-API docs JSON: `http://localhost:8082/api/v3/api-docs`
+Direct: `http://localhost:8082/api/swagger-ui.html`  
+OpenAPI JSON: `http://localhost:8082/api/v3/api-docs`
