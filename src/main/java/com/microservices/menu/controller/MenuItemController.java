@@ -1,6 +1,7 @@
 package com.microservices.menu.controller;
 
 import com.microservices.menu.dtos.MenuDtos;
+import com.microservices.menu.security.GatewayRoleHelper;
 import com.microservices.menu.service.MenuService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -201,11 +202,11 @@ public class MenuItemController {
     // ── Helper ────────────────────────────────────────────────────────────────
 
     private void assertAdmin(String userRole) {
-        if (userRole == null) {
+        if (userRole == null || userRole.isBlank()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
                     "Authentication required — add X-User-Role header (value: HEAD_OFFICE_ADMIN)");
         }
-        if (!"OFFICE_ADMIN".equals(userRole) && !"HEAD_OFFICE_ADMIN".equals(userRole)) {
+        if (!GatewayRoleHelper.isHeadOfficeAdminRole(userRole)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Insufficient role to perform this action");
         }
     }

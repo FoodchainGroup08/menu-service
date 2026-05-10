@@ -1,6 +1,7 @@
 package com.microservices.menu.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -44,6 +45,19 @@ public class GlobalExceptionHandler {
         HttpStatus status = HttpStatus.valueOf(e.getStatusCode().value());
         String reason = e.getReason() != null ? e.getReason() : status.getReasonPhrase();
         return errorResponse(status, status.getReasonPhrase(), reason, req);
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleConstraintViolation(ConstraintViolationException e, HttpServletRequest req) {
+        Map<String, String> violations = e.getConstraintViolations().stream()
+                .collect(Collectors.toMap(
+                        v -> v.getPropertyPath().toString(),
+                        v -> v.getMessage(),
+                        (a, b) -> a));
+        Map<String, Object> body = baseBody(HttpStatus.BAD_REQUEST, "Validation Failed", req);
+        body.put("message", "One or more parameters are invalid");
+        body.put("fields", violations);
+        return ResponseEntity.badRequest().body(body);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
