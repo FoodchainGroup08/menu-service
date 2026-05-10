@@ -20,10 +20,12 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Map;
+
 @Slf4j
 @RestController
 @RequestMapping("/v1/menu/items")
-@Tag(name = "Menu Items", description = "Browse and manage individual menu items. Read operations are public; write operations require OFFICE_ADMIN role.")
+@Tag(name = "Menu Items", description = "Browse and manage menu items. Through the API gateway, reads require a JWT; admin writes require HEAD_OFFICE_ADMIN or OFFICE_ADMIN (see X-User-Role when calling services directly).")
 public class MenuItemController {
 
     @Autowired
@@ -178,12 +180,12 @@ public class MenuItemController {
         description = "Permanently removes the menu item from the database. Evicts the Redis cache entry and publishes a DELETED event to Kafka. Requires OFFICE_ADMIN role.",
         security = @SecurityRequirement(name = "Bearer Authentication"))
     @ApiResponses({
-        @ApiResponse(responseCode = "204", description = "Item deleted successfully"),
+        @ApiResponse(responseCode = "200", description = "Item deleted successfully"),
         @ApiResponse(responseCode = "403", description = "Caller does not have OFFICE_ADMIN role"),
         @ApiResponse(responseCode = "404", description = "Item not found")
     })
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteItem(
+    public ResponseEntity<Map<String, String>> deleteItem(
             @Parameter(description = "UUID of the menu item to delete", required = true)
             @PathVariable String id,
             @Parameter(description = "Caller's user UUID — injected by the API Gateway from the JWT. When testing directly on Swagger, paste your user UUID here.", example = "00000000-0000-0000-0000-000000000001") @RequestHeader(value = "X-User-Id", required = false) String userId,
@@ -191,7 +193,9 @@ public class MenuItemController {
         log.info("DELETE /menu/items/{} userId={} role={}", id, userId, userRole);
         assertAdmin(userRole);
         menuService.deleteMenuItem(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(Map.of(
+                "message", "Menu item deleted successfully",
+                "id", id));
     }
 
     // ── Helper ────────────────────────────────────────────────────────────────

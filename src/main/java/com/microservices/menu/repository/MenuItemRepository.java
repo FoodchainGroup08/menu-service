@@ -12,4 +12,8 @@ public interface MenuItemRepository extends JpaRepository<MenuItem, String> {
     Page<MenuItem> findByCategory_Id(String categoryId, Pageable pageable);
     Page<MenuItem> findByCategory_IdAndActive(String categoryId, boolean active, Pageable pageable);
     List<MenuItem> findByActiveTrue();
+
+    boolean existsByNameIgnoreCase(String name);
+
+    boolean existsByNameIgnoreCaseAndIdNot(String name, String id);
 }

@@ -276,13 +276,15 @@ class MenuItemControllerTest {
     // ── DELETE /menu/items/{id} ────────────────────────────────────────────────
 
     @Test
-    void deleteItem_asAdmin_returns204() throws Exception {
+    void deleteItem_asAdmin_returns200WithMessage() throws Exception {
         doNothing().when(menuService).deleteMenuItem("item-1");
 
         mockMvc.perform(delete("/menu/items/item-1")
                         .header("X-User-Id",   "user-1")
                         .header("X-User-Role", "OFFICE_ADMIN"))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Menu item deleted successfully"))
+                .andExpect(jsonPath("$.id").value("item-1"));
 
         verify(menuService).deleteMenuItem("item-1");
     }

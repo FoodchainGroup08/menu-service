@@ -84,6 +84,8 @@ class MenuServiceImplTest {
     @BeforeEach
     void setUpRedis() {
         lenient().when(redisTemplate.opsForValue()).thenReturn(valueOps);
+        lenient().when(menuItemRepository.existsByNameIgnoreCase(anyString())).thenReturn(false);
+        lenient().when(menuItemRepository.existsByNameIgnoreCaseAndIdNot(anyString(), anyString())).thenReturn(false);
     }
 
     // ── createMenuItem ─────────────────────────────────────────────────────────
@@ -110,6 +112,20 @@ class MenuServiceImplTest {
         }
 
         @Test
+        void throwsConflictWhenNameAlreadyExists() {
+            var req = new MenuDtos.CreateMenuItemRequest(
+                    "Jollof Rice", "Nigerian classic", "cat-1", new BigDecimal("1500.00"), null);
+            when(menuItemRepository.existsByNameIgnoreCase("Jollof Rice")).thenReturn(true);
+
+            assertThatThrownBy(() -> menuService.createMenuItem(req))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.CONFLICT);
+
+            verify(menuItemRepository, never()).save(any());
+        }
+
+        @Test
         void throwsNotFoundWhenCategoryDoesNotExist() {
             var req = new MenuDtos.CreateMenuItemRequest(
                     "Jollof Rice", "Desc", "bad-cat", new BigDecimal("1500.00"), null);
@@ -120,7 +136,7 @@ class MenuServiceImplTest {
                     .extracting(e -> ((ResponseStatusException) e).getStatusCode())
                     .isEqualTo(HttpStatus.NOT_FOUND);
 
-            verifyNoInteractions(menuItemRepository);
+            verify(menuItemRepository, never()).save(any());
         }
 
         @Test

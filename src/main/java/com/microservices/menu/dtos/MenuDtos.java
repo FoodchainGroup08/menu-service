@@ -1,5 +1,8 @@
 package com.microservices.menu.dtos;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -15,8 +18,11 @@ public class MenuDtos {
             String description,
             @NotBlank(message = "Category ID must not be blank")
             String categoryId,
-            @NotNull(message = "Base price must not be null")
-            @DecimalMin(value = "0.00", message = "Base price must be zero or greater")
+            @NotNull(message = "Price must not be null")
+            @DecimalMin(value = "0.00", message = "Price must be zero or greater")
+            @JsonProperty("price")
+            @JsonAlias("basePrice")
+            @Schema(description = "Selling price for this item", example = "24.99", requiredMode = Schema.RequiredMode.REQUIRED)
             BigDecimal basePrice,
             String imageUrl
     ) {}
@@ -25,7 +31,10 @@ public class MenuDtos {
             String name,
             String description,
             String categoryId,
-            @DecimalMin(value = "0.00", message = "Base price must be zero or greater")
+            @DecimalMin(value = "0.00", message = "Price must be zero or greater")
+            @JsonProperty("price")
+            @JsonAlias("basePrice")
+            @Schema(description = "Selling price for this item", example = "24.99")
             BigDecimal basePrice,
             String imageUrl
     ) {}

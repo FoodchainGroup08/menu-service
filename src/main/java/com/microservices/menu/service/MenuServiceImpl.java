@@ -43,6 +43,10 @@ public class MenuServiceImpl implements MenuService {
     @Override
     @Transactional
     public MenuDtos.MenuItemResponse createMenuItem(MenuDtos.CreateMenuItemRequest request) {
+        if (menuItemRepository.existsByNameIgnoreCase(request.name())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "A menu item with this name already exists");
+        }
         MenuCategory category = resolveCategory(request.categoryId());
         MenuItem item = MenuItem.builder()
                 .name(request.name())
@@ -95,6 +99,11 @@ public class MenuServiceImpl implements MenuService {
     @Transactional
     public MenuDtos.MenuItemResponse updateMenuItem(String id, MenuDtos.UpdateMenuItemRequest request) {
         MenuItem item = findItemOrThrow(id);
+        if (request.name() != null
+                && menuItemRepository.existsByNameIgnoreCaseAndIdNot(request.name(), id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "A menu item with this name already exists");
+        }
         if (request.name()        != null) item.setName(request.name());
         if (request.description() != null) item.setDescription(request.description());
         if (request.basePrice()   != null) item.setBasePrice(request.basePrice());

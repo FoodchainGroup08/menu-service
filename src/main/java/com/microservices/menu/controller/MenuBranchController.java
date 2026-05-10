@@ -17,7 +17,7 @@ import java.util.List;
 @Slf4j
 @RestController
 @RequestMapping("/v1/menu")
-@Tag(name = "Branch Menu", description = "Public endpoint for fetching the active menu for a branch. The menu catalogue is shared across branches.")
+@Tag(name = "Branch Menu", description = "Returns the active menu for a branch. Through the API gateway this route requires a Bearer token.")
 public class MenuBranchController {
 
     @Autowired
