@@ -17,5 +17,8 @@ public interface MenuService {
 
     MenuDtos.CategoryResponse createCategory(MenuDtos.CreateCategoryRequest request);
     List<MenuDtos.CategoryResponse> listCategories();
+    List<String> listCategoryNames();
     MenuDtos.CategoryResponse updateCategory(String id, MenuDtos.UpdateCategoryRequest request);
+
+    List<MenuDtos.FrontendMenuItemResponse> getActiveBranchMenu(String branchId);
 }

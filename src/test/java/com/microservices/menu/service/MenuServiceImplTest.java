@@ -455,6 +455,133 @@ class MenuServiceImplTest {
         }
     }
 
+    // ── getActiveBranchMenu ────────────────────────────────────────────────────
+
+    @Nested
+    class GetActiveBranchMenu {
+
+        @Test
+        void returnsOnlyActiveItems() {
+            when(menuItemRepository.findByActiveTrue()).thenReturn(List.of(activeItem()));
+
+            List<MenuDtos.FrontendMenuItemResponse> result = menuService.getActiveBranchMenu("branch-1");
+
+            assertThat(result).hasSize(1);
+            MenuDtos.FrontendMenuItemResponse item = result.get(0);
+            assertThat(item.id()).isEqualTo("item-1");
+            assertThat(item.name()).isEqualTo("Jollof Rice");
+            assertThat(item.available()).isTrue();
+            assertThat(item.isActive()).isTrue();
+            verify(menuItemRepository).findByActiveTrue();
+        }
+
+        @Test
+        void mapsFieldsCorrectly_priceAndCategory() {
+            when(menuItemRepository.findByActiveTrue()).thenReturn(List.of(activeItem()));
+
+            List<MenuDtos.FrontendMenuItemResponse> result = menuService.getActiveBranchMenu("branch-1");
+
+            MenuDtos.FrontendMenuItemResponse item = result.get(0);
+            assertThat(item.price()).isEqualTo(1500.00);
+            assertThat(item.category()).isEqualTo("Mains");
+            assertThat(item.image()).isEqualTo(item.imageUrl());
+        }
+
+        @Test
+        void branchIdIsIgnored_alwaysReturnsAllActiveItems() {
+            when(menuItemRepository.findByActiveTrue()).thenReturn(List.of(activeItem()));
+
+            menuService.getActiveBranchMenu("any-branch-id");
+
+            // branchId is currently a no-op — only findByActiveTrue is called
+            verify(menuItemRepository).findByActiveTrue();
+        }
+
+        @Test
+        void inactiveItemsAreNotReturned() {
+            // findByActiveTrue returns only active items — inactive items never appear
+            when(menuItemRepository.findByActiveTrue()).thenReturn(List.of());
+
+            List<MenuDtos.FrontendMenuItemResponse> result = menuService.getActiveBranchMenu("branch-1");
+
+            assertThat(result).isEmpty();
+        }
+
+        @Test
+        void itemWithNullCategory_useEmptyStringForCategory() {
+            MenuItem itemNoCategory = MenuItem.builder()
+                    .id("item-2").name("Plain Rice").description("Simple")
+                    .category(null).basePrice(new BigDecimal("500.00"))
+                    .imageUrl(null).active(true).build();
+            when(menuItemRepository.findByActiveTrue()).thenReturn(List.of(itemNoCategory));
+
+            List<MenuDtos.FrontendMenuItemResponse> result = menuService.getActiveBranchMenu("branch-1");
+
+            assertThat(result.get(0).category()).isEqualTo("");
+            assertThat(result.get(0).price()).isEqualTo(500.00);
+        }
+
+        @Test
+        void itemWithNullBasePrice_usesZeroForPrice() {
+            MenuItem itemNoPrice = MenuItem.builder()
+                    .id("item-3").name("Freebie").description("Free item")
+                    .category(category()).basePrice(null)
+                    .imageUrl(null).active(true).build();
+            when(menuItemRepository.findByActiveTrue()).thenReturn(List.of(itemNoPrice));
+
+            List<MenuDtos.FrontendMenuItemResponse> result = menuService.getActiveBranchMenu("branch-1");
+
+            assertThat(result.get(0).price()).isEqualTo(0.0);
+        }
+    }
+
+    // ── listCategoryNames ──────────────────────────────────────────────────────
+
+    @Nested
+    class ListCategoryNames {
+
+        @Test
+        void returnsNamesOfActiveCategories() {
+            MenuCategory cat1 = MenuCategory.builder()
+                    .id("cat-1").name("Mains").displayOrder(1).active(true).build();
+            MenuCategory cat2 = MenuCategory.builder()
+                    .id("cat-2").name("Drinks").displayOrder(2).active(true).build();
+            when(menuCategoryRepository.findByActiveTrueOrderByDisplayOrderAsc())
+                    .thenReturn(List.of(cat1, cat2));
+
+            List<String> result = menuService.listCategoryNames();
+
+            assertThat(result).containsExactly("Mains", "Drinks");
+            verify(menuCategoryRepository).findByActiveTrueOrderByDisplayOrderAsc();
+        }
+
+        @Test
+        void returnsEmptyListWhenNoActiveCategories() {
+            when(menuCategoryRepository.findByActiveTrueOrderByDisplayOrderAsc())
+                    .thenReturn(List.of());
+
+            List<String> result = menuService.listCategoryNames();
+
+            assertThat(result).isEmpty();
+        }
+
+        @Test
+        void preservesDisplayOrder() {
+            MenuCategory cat1 = MenuCategory.builder()
+                    .id("cat-1").name("Starters").displayOrder(1).active(true).build();
+            MenuCategory cat2 = MenuCategory.builder()
+                    .id("cat-2").name("Mains").displayOrder(2).active(true).build();
+            MenuCategory cat3 = MenuCategory.builder()
+                    .id("cat-3").name("Desserts").displayOrder(3).active(true).build();
+            when(menuCategoryRepository.findByActiveTrueOrderByDisplayOrderAsc())
+                    .thenReturn(List.of(cat1, cat2, cat3));
+
+            List<String> result = menuService.listCategoryNames();
+
+            assertThat(result).containsExactly("Starters", "Mains", "Desserts");
+        }
+    }
+
     // ── updateCategory ─────────────────────────────────────────────────────────
 
     @Nested

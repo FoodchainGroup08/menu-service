@@ -61,6 +61,18 @@ public class MenuDtos {
             boolean active
     ) {}
 
+    public record FrontendMenuItemResponse(
+            String id,
+            String name,
+            String description,
+            double price,
+            String category,
+            boolean available,
+            boolean isActive,
+            String imageUrl,
+            String image
+    ) {}
+
     public record MenuItemEventPayload(
             String menuItemId,
             String name,

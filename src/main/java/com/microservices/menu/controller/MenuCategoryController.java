@@ -15,11 +15,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.List;
-
 @Slf4j
 @RestController
-@RequestMapping("/menu/categories")
+@RequestMapping("/v1/menu/categories")
 @Tag(name = "Menu Categories", description = "Manage the category groupings that organise menu items (e.g. Starters, Mains, Drinks). Read operations are public; write operations require OFFICE_ADMIN role.")
 public class MenuCategoryController {
 
@@ -30,12 +28,19 @@ public class MenuCategoryController {
 
     @Operation(
         summary = "List all active categories",
-        description = "Returns all active menu categories ordered by displayOrder ascending. Response is served from Redis cache (TTL 10 min) when available.")
+        description = "Returns all active menu categories ordered by displayOrder ascending. " +
+                      "Add ?namesOnly=true to receive a plain string array of category names (frontend-compatible). " +
+                      "Full object responses are served from Redis cache (TTL 10 min) when available.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "List of active categories in display order")
     })
     @GetMapping
-    public ResponseEntity<List<MenuDtos.CategoryResponse>> listCategories() {
+    public ResponseEntity<?> listCategories(
+            @Parameter(description = "When true, returns a plain string array of category names instead of full objects")
+            @RequestParam(defaultValue = "false") boolean namesOnly) {
+        if (namesOnly) {
+            return ResponseEntity.ok(menuService.listCategoryNames());
+        }
         return ResponseEntity.ok(menuService.listCategories());
     }
 

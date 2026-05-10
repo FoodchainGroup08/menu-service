@@ -184,6 +184,24 @@ public class MenuServiceImpl implements MenuService {
         return toCategoryResponse(saved);
     }
 
+    // ── Branch Menu ───────────────────────────────────────────────────────────
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<MenuDtos.FrontendMenuItemResponse> getActiveBranchMenu(String branchId) {
+        // Menu is global; branchId accepted for future branch-specific filtering
+        log.info("getActiveBranchMenu branchId={}", branchId);
+        List<MenuItem> items = menuItemRepository.findByActiveTrue();
+        return items.stream().map(this::toFrontendResponse).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<String> listCategoryNames() {
+        return menuCategoryRepository.findByActiveTrueOrderByDisplayOrderAsc()
+                .stream().map(MenuCategory::getName).collect(Collectors.toList());
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private MenuItem findItemOrThrow(String id) {
@@ -254,5 +272,14 @@ public class MenuServiceImpl implements MenuService {
 
     private MenuDtos.CategoryResponse toCategoryResponse(MenuCategory c) {
         return new MenuDtos.CategoryResponse(c.getId(), c.getName(), c.getDisplayOrder(), c.isActive());
+    }
+
+    private MenuDtos.FrontendMenuItemResponse toFrontendResponse(MenuItem item) {
+        String catName = item.getCategory() != null ? item.getCategory().getName() : "";
+        double price   = item.getBasePrice() != null ? item.getBasePrice().doubleValue() : 0.0;
+        return new MenuDtos.FrontendMenuItemResponse(
+                item.getId(), item.getName(), item.getDescription(),
+                price, catName, item.isActive(), item.isActive(),
+                item.getImageUrl(), item.getImageUrl());
     }
 }

@@ -20,7 +20,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Slf4j
 @RestController
-@RequestMapping("/menu/items")
+@RequestMapping("/v1/menu/items")
 @Tag(name = "Menu Items", description = "Browse and manage individual menu items. Read operations are public; write operations require OFFICE_ADMIN role.")
 public class MenuItemController {
 

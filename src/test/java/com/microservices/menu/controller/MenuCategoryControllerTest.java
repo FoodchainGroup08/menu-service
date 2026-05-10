@@ -64,6 +64,46 @@ class MenuCategoryControllerTest {
                 .andExpect(jsonPath("$.length()").value(0));
     }
 
+    @Test
+    void listCategories_namesOnly_returnsStringArray() throws Exception {
+        when(menuService.listCategoryNames()).thenReturn(List.of("Mains", "Drinks", "Desserts"));
+
+        mockMvc.perform(get("/menu/categories").param("namesOnly", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$.length()").value(3))
+                .andExpect(jsonPath("$[0]").value("Mains"))
+                .andExpect(jsonPath("$[1]").value("Drinks"))
+                .andExpect(jsonPath("$[2]").value("Desserts"));
+
+        verify(menuService).listCategoryNames();
+        verify(menuService, never()).listCategories();
+    }
+
+    @Test
+    void listCategories_namesOnlyFalse_returnsFullObjects() throws Exception {
+        when(menuService.listCategories()).thenReturn(List.of(
+                categoryResponse("cat-1", "Mains", 1)));
+
+        mockMvc.perform(get("/menu/categories").param("namesOnly", "false"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value("cat-1"))
+                .andExpect(jsonPath("$[0].name").value("Mains"));
+
+        verify(menuService).listCategories();
+        verify(menuService, never()).listCategoryNames();
+    }
+
+    @Test
+    void listCategories_namesOnly_empty_returnsEmptyStringArray() throws Exception {
+        when(menuService.listCategoryNames()).thenReturn(List.of());
+
+        mockMvc.perform(get("/menu/categories").param("namesOnly", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
     // ── POST /menu/categories ──────────────────────────────────────────────────
 
     @Test
