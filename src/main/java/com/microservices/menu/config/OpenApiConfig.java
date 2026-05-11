@@ -27,8 +27,11 @@ public class OpenApiConfig {
                                 .email("team@foodchain.com")))
                 .servers(List.of(
                         new Server()
+                                .url("http://54.235.78.18:8080/api")
+                                .description("Production (Live API Gateway)"),
+                        new Server()
                                 .url("http://localhost:8080/api")
-                                .description("API Gateway"),
+                                .description("API Gateway (local dev)"),
                         new Server()
                                 .url("http://localhost:8082/api")
                                 .description("Menu Service direct (local dev)")))
