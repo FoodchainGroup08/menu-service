@@ -1,0 +1,5 @@
+/app/src/test/java/com/microservices/menu/service/MenuServiceImplTest.java
+/app/src/test/java/com/microservices/menu/controller/MenuBranchControllerTest.java
+/app/src/test/java/com/microservices/menu/MenuServiceApplicationTests.java
+/app/src/test/java/com/microservices/menu/controller/MenuCategoryControllerTest.java
+/app/src/test/java/com/microservices/menu/controller/MenuItemControllerTest.java

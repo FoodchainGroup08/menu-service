@@ -21,4 +21,5 @@ public interface MenuService {
     MenuDtos.CategoryResponse updateCategory(String id, MenuDtos.UpdateCategoryRequest request);
 
     List<MenuDtos.FrontendMenuItemResponse> getActiveBranchMenu(String branchId);
+    MenuDtos.FoodSuggestionResponse suggestFood(MenuDtos.FoodSuggestionRequest request);
 }
