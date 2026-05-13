@@ -30,12 +30,14 @@ public class S3Service {
 
     public String uploadImage(MultipartFile file) throws IOException {
         String key = "menu-items/" + UUID.randomUUID() + "-" + file.getOriginalFilename();
+        String contentType = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
 
         s3Client.putObject(
                 PutObjectRequest.builder()
                         .bucket(bucketName)
                         .key(key)
-                        .contentType(file.getContentType())
+                        .contentType(contentType)
+                        .contentLength(file.getSize())
                         .build(),
                 RequestBody.fromInputStream(file.getInputStream(), file.getSize())
         );
