@@ -40,4 +40,18 @@ public class MenuBranchController {
         log.info("GET /menu/branch/{}", branchId);
         return ResponseEntity.ok(menuService.getActiveBranchMenu(branchId));
     }
+
+    @Operation(
+        summary = "Get AI-style food suggestions",
+        description = "Guides the user with missing preference questions, then ranks active menu items " +
+                      "by budget, meal type, appetite, dietary preference, party size, and fulfilment type.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Questions or ranked menu suggestions")
+    })
+    @PostMapping("/suggestions")
+    public ResponseEntity<MenuDtos.FoodSuggestionResponse> suggestFood(
+            @RequestBody MenuDtos.FoodSuggestionRequest request) {
+        log.info("POST /menu/suggestions branchId={}", request != null ? request.branchId() : null);
+        return ResponseEntity.ok(menuService.suggestFood(request));
+    }
 }

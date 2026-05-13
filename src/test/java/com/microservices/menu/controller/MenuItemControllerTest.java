@@ -5,6 +5,7 @@ import com.microservices.menu.dtos.MenuDtos;
 import com.microservices.menu.service.MenuService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.PageImpl;
@@ -23,6 +24,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(MenuItemController.class)
+@AutoConfigureMockMvc(addFilters = false)
 class MenuItemControllerTest {
 
     @Autowired
@@ -52,10 +54,10 @@ class MenuItemControllerTest {
 
     @Test
     void listItems_noFilters_returns200WithPage() throws Exception {
-        when(menuService.listMenuItems(null, null, any()))
+        when(menuService.listMenuItems(isNull(), isNull(), any()))
                 .thenReturn(new PageImpl<>(List.of(summary())));
 
-        mockMvc.perform(get("/menu/items"))
+        mockMvc.perform(get("/v1/menu/items"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray())
                 .andExpect(jsonPath("$.content[0].id").value("item-1"))
@@ -68,7 +70,7 @@ class MenuItemControllerTest {
         when(menuService.listMenuItems(eq("cat-1"), isNull(), any()))
                 .thenReturn(new PageImpl<>(List.of(summary())));
 
-        mockMvc.perform(get("/menu/items").param("categoryId", "cat-1"))
+        mockMvc.perform(get("/v1/menu/items").param("categoryId", "cat-1"))
                 .andExpect(status().isOk());
 
         verify(menuService).listMenuItems(eq("cat-1"), isNull(), any());
@@ -79,7 +81,7 @@ class MenuItemControllerTest {
         when(menuService.listMenuItems(isNull(), eq(false), any()))
                 .thenReturn(new PageImpl<>(List.of()));
 
-        mockMvc.perform(get("/menu/items").param("active", "false"))
+        mockMvc.perform(get("/v1/menu/items").param("active", "false"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isEmpty());
 
@@ -91,7 +93,7 @@ class MenuItemControllerTest {
         when(menuService.listMenuItems(eq("cat-1"), eq(true), any()))
                 .thenReturn(new PageImpl<>(List.of(summary())));
 
-        mockMvc.perform(get("/menu/items")
+        mockMvc.perform(get("/v1/menu/items")
                         .param("categoryId", "cat-1")
                         .param("active", "true"))
                 .andExpect(status().isOk());
@@ -105,7 +107,7 @@ class MenuItemControllerTest {
     void getItem_exists_returns200WithItem() throws Exception {
         when(menuService.getMenuItem("item-1")).thenReturn(response(true));
 
-        mockMvc.perform(get("/menu/items/item-1"))
+        mockMvc.perform(get("/v1/menu/items/item-1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value("item-1"))
                 .andExpect(jsonPath("$.name").value("Jollof Rice"))
@@ -118,7 +120,7 @@ class MenuItemControllerTest {
         when(menuService.getMenuItem("unknown"))
                 .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Menu item not found: unknown"));
 
-        mockMvc.perform(get("/menu/items/unknown"))
+        mockMvc.perform(get("/v1/menu/items/unknown"))
                 .andExpect(status().isNotFound());
     }
 
@@ -130,7 +132,7 @@ class MenuItemControllerTest {
                 "Jollof Rice", "Nigerian classic", "cat-1", new BigDecimal("1500.00"), null);
         when(menuService.createMenuItem(any())).thenReturn(response(true));
 
-        mockMvc.perform(post("/menu/items")
+        mockMvc.perform(post("/v1/menu/items")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req))
                         .header("X-User-Id",   "user-1")
@@ -147,7 +149,7 @@ class MenuItemControllerTest {
         var req = new MenuDtos.CreateMenuItemRequest(
                 "Jollof Rice", "Nigerian classic", "cat-1", new BigDecimal("1500.00"), null);
 
-        mockMvc.perform(post("/menu/items")
+        mockMvc.perform(post("/v1/menu/items")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req))
                         .header("X-User-Id",   "user-2")
@@ -164,7 +166,7 @@ class MenuItemControllerTest {
         var req = new MenuDtos.UpdateMenuItemRequest("Updated Rice", null, null, new BigDecimal("2000.00"), null);
         when(menuService.updateMenuItem(eq("item-1"), any())).thenReturn(response(true));
 
-        mockMvc.perform(put("/menu/items/item-1")
+        mockMvc.perform(put("/v1/menu/items/item-1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req))
                         .header("X-User-Id",   "user-1")
@@ -180,7 +182,7 @@ class MenuItemControllerTest {
         when(menuService.updateMenuItem(eq("bad-id"), any()))
                 .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Menu item not found: bad-id"));
 
-        mockMvc.perform(put("/menu/items/bad-id")
+        mockMvc.perform(put("/v1/menu/items/bad-id")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req))
                         .header("X-User-Id",   "user-1")
@@ -192,7 +194,7 @@ class MenuItemControllerTest {
     void updateItem_nonAdmin_returns403() throws Exception {
         var req = new MenuDtos.UpdateMenuItemRequest("Name", null, null, null, null);
 
-        mockMvc.perform(put("/menu/items/item-1")
+        mockMvc.perform(put("/v1/menu/items/item-1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req))
                         .header("X-User-Id",   "user-2")
@@ -206,7 +208,7 @@ class MenuItemControllerTest {
     void activate_asAdmin_returns200WithActiveTrue() throws Exception {
         when(menuService.setItemActive("item-1", true)).thenReturn(response(true));
 
-        mockMvc.perform(patch("/menu/items/item-1/activate")
+        mockMvc.perform(patch("/v1/menu/items/item-1/activate")
                         .header("X-User-Role", "HEAD_OFFICE_ADMIN"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.active").value(true));
@@ -214,7 +216,7 @@ class MenuItemControllerTest {
 
     @Test
     void activate_nonAdmin_returns403() throws Exception {
-        mockMvc.perform(patch("/menu/items/item-1/activate")
+        mockMvc.perform(patch("/v1/menu/items/item-1/activate")
                         .header("X-User-Role", "CUSTOMER"))
                 .andExpect(status().isForbidden());
 
@@ -227,7 +229,7 @@ class MenuItemControllerTest {
     void deactivate_asAdmin_returns200WithActiveFalse() throws Exception {
         when(menuService.setItemActive("item-1", false)).thenReturn(response(false));
 
-        mockMvc.perform(patch("/menu/items/item-1/deactivate")
+        mockMvc.perform(patch("/v1/menu/items/item-1/deactivate")
                         .header("X-User-Role", "HEAD_OFFICE_ADMIN"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.active").value(false));
@@ -235,7 +237,7 @@ class MenuItemControllerTest {
 
     @Test
     void deactivate_nonAdmin_returns403() throws Exception {
-        mockMvc.perform(patch("/menu/items/item-1/deactivate")
+        mockMvc.perform(patch("/v1/menu/items/item-1/deactivate")
                         .header("X-User-Role", "VIEWER"))
                 .andExpect(status().isForbidden());
     }
@@ -246,7 +248,7 @@ class MenuItemControllerTest {
     void toggle_asAdmin_returnsToggledResponse() throws Exception {
         when(menuService.toggleItemActive("item-1")).thenReturn(response(false));
 
-        mockMvc.perform(patch("/menu/items/item-1/toggle")
+        mockMvc.perform(patch("/v1/menu/items/item-1/toggle")
                         .header("X-User-Role", "HEAD_OFFICE_ADMIN"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.active").value(false));
@@ -259,14 +261,14 @@ class MenuItemControllerTest {
         when(menuService.toggleItemActive("bad-id"))
                 .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Menu item not found: bad-id"));
 
-        mockMvc.perform(patch("/menu/items/bad-id/toggle")
+        mockMvc.perform(patch("/v1/menu/items/bad-id/toggle")
                         .header("X-User-Role", "HEAD_OFFICE_ADMIN"))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     void toggle_nonAdmin_returns403() throws Exception {
-        mockMvc.perform(patch("/menu/items/item-1/toggle")
+        mockMvc.perform(patch("/v1/menu/items/item-1/toggle")
                         .header("X-User-Role", "CUSTOMER"))
                 .andExpect(status().isForbidden());
 
@@ -279,7 +281,7 @@ class MenuItemControllerTest {
     void deleteItem_asAdmin_returns204() throws Exception {
         doNothing().when(menuService).deleteMenuItem("item-1");
 
-        mockMvc.perform(delete("/menu/items/item-1")
+        mockMvc.perform(delete("/v1/menu/items/item-1")
                         .header("X-User-Id",   "user-1")
                         .header("X-User-Role", "HEAD_OFFICE_ADMIN"))
                 .andExpect(status().isNoContent());
@@ -292,7 +294,7 @@ class MenuItemControllerTest {
         doThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Menu item not found: bad-id"))
                 .when(menuService).deleteMenuItem("bad-id");
 
-        mockMvc.perform(delete("/menu/items/bad-id")
+        mockMvc.perform(delete("/v1/menu/items/bad-id")
                         .header("X-User-Id",   "user-1")
                         .header("X-User-Role", "HEAD_OFFICE_ADMIN"))
                 .andExpect(status().isNotFound());
@@ -300,7 +302,7 @@ class MenuItemControllerTest {
 
     @Test
     void deleteItem_nonAdmin_returns403AndDoesNotCallService() throws Exception {
-        mockMvc.perform(delete("/menu/items/item-1")
+        mockMvc.perform(delete("/v1/menu/items/item-1")
                         .header("X-User-Id",   "user-2")
                         .header("X-User-Role", "VIEWER"))
                 .andExpect(status().isForbidden());

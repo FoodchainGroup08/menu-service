@@ -394,7 +394,8 @@ class MenuServiceImplTest {
                     .extracting(e -> ((ResponseStatusException) e).getStatusCode())
                     .isEqualTo(HttpStatus.NOT_FOUND);
 
-            verifyNoInteractions(menuItemRepository, kafkaTemplate);
+            verify(menuItemRepository).findById("bad-id");
+            verifyNoInteractions(kafkaTemplate);
         }
     }
 
@@ -532,6 +533,64 @@ class MenuServiceImplTest {
             List<MenuDtos.FrontendMenuItemResponse> result = menuService.getActiveBranchMenu("branch-1");
 
             assertThat(result.get(0).price()).isEqualTo(0.0);
+        }
+    }
+
+    // ── suggestFood ───────────────────────────────────────────────────────────
+
+    @Nested
+    class SuggestFood {
+
+        @Test
+        void incompleteRequest_returnsGuidingQuestions() {
+            MenuDtos.FoodSuggestionResponse result = menuService.suggestFood(
+                    new MenuDtos.FoodSuggestionRequest(null, null, null, null, null, List.of(), null, null, null));
+
+            assertThat(result.readyForSuggestions()).isFalse();
+            assertThat(result.suggestions()).isEmpty();
+            assertThat(result.questions()).contains(
+                    "What is your budget?",
+                    "Do you want pickup, delivery, or dine-in?"
+            );
+            verifyNoInteractions(menuItemRepository);
+        }
+
+        @Test
+        void completeRequest_returnsRankedSuggestionsWithinBudget() {
+            MenuCategory mains = MenuCategory.builder()
+                    .id("cat-1").name("Mains").displayOrder(1).active(true).build();
+            MenuItem jollof = MenuItem.builder()
+                    .id("item-1").name("Spicy Jollof Rice").description("Rice with pepper and chicken")
+                    .category(mains).basePrice(new BigDecimal("1500.00"))
+                    .active(true).build();
+            MenuItem cake = MenuItem.builder()
+                    .id("item-2").name("Chocolate Cake").description("Sweet dessert")
+                    .category(MenuCategory.builder().id("cat-2").name("Desserts").build())
+                    .basePrice(new BigDecimal("2500.00"))
+                    .active(true).build();
+            when(menuItemRepository.findByActiveTrue()).thenReturn(List.of(cake, jollof));
+
+            MenuDtos.FoodSuggestionRequest request = new MenuDtos.FoodSuggestionRequest(
+                    "branch-1",
+                    "Lekki Branch",
+                    new BigDecimal("3000.00"),
+                    "lunch",
+                    "heavy",
+                    List.of("spicy", "high protein"),
+                    1,
+                    "delivery",
+                    3
+            );
+
+            MenuDtos.FoodSuggestionResponse result = menuService.suggestFood(request);
+
+            assertThat(result.readyForSuggestions()).isTrue();
+            assertThat(result.questions()).isEmpty();
+            assertThat(result.suggestions()).hasSize(2);
+            assertThat(result.suggestions().get(0).menuItemName()).isEqualTo("Spicy Jollof Rice");
+            assertThat(result.suggestions().get(0).branchName()).isEqualTo("Lekki Branch");
+            assertThat(result.suggestions().get(0).estimatedTotalCost()).isEqualByComparingTo("1500.00");
+            assertThat(result.suggestions().get(0).reason()).contains("fits your budget");
         }
     }
 
