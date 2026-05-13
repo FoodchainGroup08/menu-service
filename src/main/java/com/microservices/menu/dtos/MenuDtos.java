@@ -80,4 +80,35 @@ public class MenuDtos {
             boolean active,
             String eventType
     ) {}
+
+    public record FoodSuggestionRequest(
+            String branchId,
+            String branchName,
+            BigDecimal budget,
+            String mealType,
+            String appetite,
+            List<String> dietaryPreferences,
+            Integer peopleCount,
+            String fulfillmentType,
+            Integer limit
+    ) {}
+
+    public record FoodSuggestionResponse(
+            String message,
+            boolean readyForSuggestions,
+            List<String> questions,
+            List<FoodSuggestionItem> suggestions,
+            BigDecimal estimatedTotalCost
+    ) {}
+
+    public record FoodSuggestionItem(
+            String menuItemId,
+            String menuItemName,
+            BigDecimal price,
+            String reason,
+            String branchId,
+            String branchName,
+            BigDecimal estimatedTotalCost,
+            List<String> optionalAddOns
+    ) {}
 }

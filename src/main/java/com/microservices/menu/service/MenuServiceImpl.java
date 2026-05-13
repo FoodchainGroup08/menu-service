@@ -20,9 +20,12 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
-
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -40,6 +43,7 @@ public class MenuServiceImpl implements MenuService {
     @Autowired private StringRedisTemplate redisTemplate;
     @Autowired private ObjectMapper objectMapper;
     @Autowired private S3Service s3Service;
+    @Autowired(required = false) private FoodSuggestionAiClient foodSuggestionAiClient;
 
     // ── Menu Items ────────────────────────────────────────────────────────────
 
@@ -238,7 +242,92 @@ public class MenuServiceImpl implements MenuService {
                 .stream().map(MenuCategory::getName).collect(Collectors.toList());
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public MenuDtos.FoodSuggestionResponse suggestFood(MenuDtos.FoodSuggestionRequest request) {
+        List<String> questions = missingSuggestionQuestions(request);
+        if (!questions.isEmpty()) {
+            Optional<MenuDtos.FoodSuggestionResponse> aiQuestionResponse =
+                    suggestFoodWithAi(request, List.of(), questions);
+            if (aiQuestionResponse.isPresent()) {
+                return aiQuestionResponse.get();
+            }
+            return new MenuDtos.FoodSuggestionResponse(
+                    "I can help you choose something good. Answer these first so I can narrow the menu.",
+                    false,
+                    questions,
+                    List.of(),
+                    BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)
+            );
+        }
+
+        List<MenuItem> activeItems = menuItemRepository.findByActiveTrue();
+        if (activeItems.isEmpty()) {
+            return new MenuDtos.FoodSuggestionResponse(
+                    "I could not find any available menu items right now.",
+                    true,
+                    List.of(),
+                    List.of(),
+                    BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)
+            );
+        }
+
+        Optional<MenuDtos.FoodSuggestionResponse> aiSuggestionResponse =
+                suggestFoodWithAi(request, activeItems, questions);
+        return aiSuggestionResponse.orElseGet(() -> new MenuDtos.FoodSuggestionResponse(
+                "AI suggestions are currently unavailable. Please try again in a moment.",
+                false,
+                List.of(),
+                List.of(),
+                BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)
+        ));
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private Optional<MenuDtos.FoodSuggestionResponse> suggestFoodWithAi(
+            MenuDtos.FoodSuggestionRequest request,
+            List<MenuItem> activeItems,
+            List<String> missingQuestions
+    ) {
+        if (foodSuggestionAiClient == null) {
+            log.error("FoodSuggestionAiClient bean is null — check OpenAI configuration (OPENAI_API_KEY, APP_AI_FOOD_SUGGESTIONS_ENABLED)");
+            return Optional.empty();
+        }
+        try {
+            return foodSuggestionAiClient.suggestFood(request, activeItems, missingQuestions);
+        } catch (Exception e) {
+            log.error("AI food suggestion failed ({}): {}", e.getClass().getSimpleName(), e.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    private List<String> missingSuggestionQuestions(MenuDtos.FoodSuggestionRequest request) {
+        List<String> questions = new ArrayList<>();
+        if (request == null || request.budget() == null || request.budget().compareTo(BigDecimal.ZERO) <= 0) {
+            questions.add("What is your budget?");
+        }
+        if (request == null || !hasText(request.mealType())) {
+            questions.add("What kind of meal do you want? For example: breakfast, lunch, dinner, snack, or dessert.");
+        }
+        if (request == null || !hasText(request.appetite())) {
+            questions.add("Do you want something light or heavy?");
+        }
+        if (request == null || request.dietaryPreferences() == null || request.dietaryPreferences().isEmpty()) {
+            questions.add("Any dietary preference? For example: vegetarian, spicy, non-spicy, low sugar, or high protein.");
+        }
+        if (request == null || request.peopleCount() == null || request.peopleCount() <= 0) {
+            questions.add("Are you ordering for one person or multiple people?");
+        }
+        if (request == null || !hasText(request.fulfillmentType())) {
+            questions.add("Do you want pickup, delivery, or dine-in?");
+        }
+        return questions;
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
+    }
 
     private MenuItem findItemOrThrow(String id) {
         return menuItemRepository.findById(id)
@@ -318,4 +407,5 @@ public class MenuServiceImpl implements MenuService {
                 price, catName, item.isActive(), item.isActive(),
                 item.getImageUrl(), item.getImageUrl());
     }
+
 }

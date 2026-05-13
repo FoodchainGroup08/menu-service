@@ -61,6 +61,16 @@ logging:
     root: INFO
     com.microservices: DEBUG
 
+app:
+  ai:
+    food-suggestions:
+      enabled: ${APP_AI_FOOD_SUGGESTIONS_ENABLED:false}
+    gemini:
+      api-key: ${GEMINI_API_KEY:}
+      base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta}
+      model: ${GEMINI_MODEL:gemini-2.5-flash}
+      timeout-ms: ${GEMINI_TIMEOUT_MS:15000}
+
 springdoc:
   api-docs:
     path: /v3/api-docs

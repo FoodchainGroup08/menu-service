@@ -5,6 +5,7 @@ import com.microservices.menu.dtos.MenuDtos;
 import com.microservices.menu.service.MenuService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpStatus;
@@ -20,6 +21,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(MenuCategoryController.class)
+@AutoConfigureMockMvc(addFilters = false)
 class MenuCategoryControllerTest {
 
     @Autowired
@@ -46,7 +48,7 @@ class MenuCategoryControllerTest {
                 categoryResponse("cat-2", "Drinks", 2)
         ));
 
-        mockMvc.perform(get("/menu/categories"))
+        mockMvc.perform(get("/v1/menu/categories"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$.length()").value(2))
@@ -58,7 +60,7 @@ class MenuCategoryControllerTest {
     void listCategories_empty_returns200WithEmptyArray() throws Exception {
         when(menuService.listCategories()).thenReturn(List.of());
 
-        mockMvc.perform(get("/menu/categories"))
+        mockMvc.perform(get("/v1/menu/categories"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$.length()").value(0));
@@ -68,7 +70,7 @@ class MenuCategoryControllerTest {
     void listCategories_namesOnly_returnsStringArray() throws Exception {
         when(menuService.listCategoryNames()).thenReturn(List.of("Mains", "Drinks", "Desserts"));
 
-        mockMvc.perform(get("/menu/categories").param("namesOnly", "true"))
+        mockMvc.perform(get("/v1/menu/categories").param("namesOnly", "true"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$.length()").value(3))
@@ -85,7 +87,7 @@ class MenuCategoryControllerTest {
         when(menuService.listCategories()).thenReturn(List.of(
                 categoryResponse("cat-1", "Mains", 1)));
 
-        mockMvc.perform(get("/menu/categories").param("namesOnly", "false"))
+        mockMvc.perform(get("/v1/menu/categories").param("namesOnly", "false"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value("cat-1"))
                 .andExpect(jsonPath("$[0].name").value("Mains"));
@@ -98,7 +100,7 @@ class MenuCategoryControllerTest {
     void listCategories_namesOnly_empty_returnsEmptyStringArray() throws Exception {
         when(menuService.listCategoryNames()).thenReturn(List.of());
 
-        mockMvc.perform(get("/menu/categories").param("namesOnly", "true"))
+        mockMvc.perform(get("/v1/menu/categories").param("namesOnly", "true"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$.length()").value(0));
@@ -111,7 +113,7 @@ class MenuCategoryControllerTest {
         var req = new MenuDtos.CreateCategoryRequest("Grills", 3);
         when(menuService.createCategory(any())).thenReturn(categoryResponse("cat-3", "Grills", 3));
 
-        mockMvc.perform(post("/menu/categories")
+        mockMvc.perform(post("/v1/menu/categories")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req))
                         .header("X-User-Id",   "user-1")
@@ -129,7 +131,7 @@ class MenuCategoryControllerTest {
     void createCategory_nonAdmin_returns403AndDoesNotCallService() throws Exception {
         var req = new MenuDtos.CreateCategoryRequest("Grills", 3);
 
-        mockMvc.perform(post("/menu/categories")
+        mockMvc.perform(post("/v1/menu/categories")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req))
                         .header("X-User-Id",   "user-2")
@@ -147,7 +149,7 @@ class MenuCategoryControllerTest {
         when(menuService.updateCategory(eq("cat-1"), any()))
                 .thenReturn(categoryResponse("cat-1", "Updated Mains", 10));
 
-        mockMvc.perform(put("/menu/categories/cat-1")
+        mockMvc.perform(put("/v1/menu/categories/cat-1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req))
                         .header("X-User-Id",   "user-1")
@@ -165,7 +167,7 @@ class MenuCategoryControllerTest {
         when(menuService.updateCategory(eq("bad-id"), any()))
                 .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found: bad-id"));
 
-        mockMvc.perform(put("/menu/categories/bad-id")
+        mockMvc.perform(put("/v1/menu/categories/bad-id")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req))
                         .header("X-User-Id",   "user-1")
@@ -177,7 +179,7 @@ class MenuCategoryControllerTest {
     void updateCategory_nonAdmin_returns403() throws Exception {
         var req = new MenuDtos.UpdateCategoryRequest("Name", null);
 
-        mockMvc.perform(put("/menu/categories/cat-1")
+        mockMvc.perform(put("/v1/menu/categories/cat-1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req))
                         .header("X-User-Id",   "user-2")
@@ -193,7 +195,7 @@ class MenuCategoryControllerTest {
         when(menuService.updateCategory(eq("cat-1"), any()))
                 .thenReturn(categoryResponse("cat-1", "Soups Only", 1));
 
-        mockMvc.perform(put("/menu/categories/cat-1")
+        mockMvc.perform(put("/v1/menu/categories/cat-1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req))
                         .header("X-User-Id",   "user-1")
