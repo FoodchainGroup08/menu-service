@@ -3,7 +3,9 @@ package com.microservices.menu.service;
 import com.microservices.menu.dtos.MenuDtos;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 public interface MenuService {
@@ -14,6 +16,8 @@ public interface MenuService {
     MenuDtos.MenuItemResponse setItemActive(String id, boolean active);
     MenuDtos.MenuItemResponse toggleItemActive(String id);
     void deleteMenuItem(String id);
+    MenuDtos.MenuItemResponse uploadItemImage(String id, MultipartFile image) throws IOException;
+    MenuDtos.MenuItemResponse removeItemImage(String id);
 
     MenuDtos.CategoryResponse createCategory(MenuDtos.CreateCategoryRequest request);
     List<MenuDtos.CategoryResponse> listCategories();

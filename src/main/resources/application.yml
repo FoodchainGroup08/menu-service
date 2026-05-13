@@ -23,6 +23,10 @@ spring:
       timeout: 2000ms
       lettuce:
         shutdown-timeout: 100ms
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
     consumer:
@@ -44,6 +48,13 @@ eureka:
       defaultZone: http://localhost:8761/eureka/
   instance:
     prefer-ip-address: true
+
+aws:
+  access-key-id: ${AWS_ACCESS_KEY_ID:}
+  secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+  region: ${AWS_REGION:us-east-1}
+  s3:
+    bucket-name: ${AWS_S3_BUCKET_NAME:foodchain-images-bucket}
 
 logging:
   level:

@@ -16,7 +16,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.io.IOException;
 
 import java.time.Duration;
 import java.util.List;
@@ -36,6 +39,7 @@ public class MenuServiceImpl implements MenuService {
     @Autowired private KafkaTemplate<String, String> kafkaTemplate;
     @Autowired private StringRedisTemplate redisTemplate;
     @Autowired private ObjectMapper objectMapper;
+    @Autowired private S3Service s3Service;
 
     // ── Menu Items ────────────────────────────────────────────────────────────
 
@@ -134,10 +138,42 @@ public class MenuServiceImpl implements MenuService {
     @Transactional
     public void deleteMenuItem(String id) {
         MenuItem item = findItemOrThrow(id);
+        if (item.getImageUrl() != null) {
+            s3Service.deleteImage(item.getImageUrl());
+        }
         menuItemRepository.delete(item);
         log.info("MenuItem {} deleted", id);
         evictCache(ITEM_KEY_PREFIX + id);
         publishEvent(item, "DELETED");
+    }
+
+    @Override
+    @Transactional
+    public MenuDtos.MenuItemResponse uploadItemImage(String id, MultipartFile file) throws IOException {
+        MenuItem item = findItemOrThrow(id);
+        if (item.getImageUrl() != null) {
+            s3Service.deleteImage(item.getImageUrl());
+        }
+        String url = s3Service.uploadImage(file);
+        item.setImageUrl(url);
+        MenuItem saved = menuItemRepository.save(item);
+        evictCache(ITEM_KEY_PREFIX + id);
+        log.info("MenuItem {} image uploaded: {}", id, url);
+        return toResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public MenuDtos.MenuItemResponse removeItemImage(String id) {
+        MenuItem item = findItemOrThrow(id);
+        if (item.getImageUrl() != null) {
+            s3Service.deleteImage(item.getImageUrl());
+            item.setImageUrl(null);
+            menuItemRepository.save(item);
+            evictCache(ITEM_KEY_PREFIX + id);
+            log.info("MenuItem {} image removed", id);
+        }
+        return toResponse(item);
     }
 
     // ── Categories ────────────────────────────────────────────────────────────

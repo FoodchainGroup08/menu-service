@@ -2,6 +2,7 @@ package com.microservices.menu.exception;
 
 import com.microservices.menu.dtos.BaseResponse;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -15,6 +16,7 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -41,7 +43,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<BaseResponse<Void>> handleGeneral(Exception e, HttpServletRequest req) {
-        return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error", "An unexpected error occurred", req);
+        log.error("Unhandled exception at {}: {}", req.getRequestURI(), e.getMessage(), e);
+        return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error",
+                e.getClass().getSimpleName() + ": " + e.getMessage(), req);
     }
 
     private ResponseEntity<BaseResponse<Void>> errorResponse(HttpStatus status, String error, String message, HttpServletRequest req) {

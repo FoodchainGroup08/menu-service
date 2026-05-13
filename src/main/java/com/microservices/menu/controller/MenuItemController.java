@@ -15,8 +15,12 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.io.IOException;
 
 @Slf4j
 @RestController
@@ -190,6 +194,47 @@ public class MenuItemController {
         assertAdmin(userRole);
         menuService.deleteMenuItem(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // ── POST /menu/items/{id}/image ───────────────────────────────────────────
+
+    @Operation(
+        summary = "Upload or replace the image for a menu item",
+        description = "Uploads an image file to S3 under menu-items/{uuid}-{filename} and stores the public URL on the item. If the item already has an image, the old one is deleted from S3 first. Requires OFFICE_ADMIN role.",
+        security = @SecurityRequirement(name = "Bearer Authentication"))
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Image uploaded, updated item returned"),
+        @ApiResponse(responseCode = "403", description = "Caller does not have OFFICE_ADMIN role"),
+        @ApiResponse(responseCode = "404", description = "Item not found")
+    })
+    @PostMapping(value = "/{id}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<MenuDtos.MenuItemResponse> uploadImage(
+            @Parameter(description = "UUID of the menu item", required = true)
+            @PathVariable String id,
+            @RequestParam("image") MultipartFile image,
+            @Parameter(hidden = true) @RequestHeader("X-User-Role") String userRole) throws IOException {
+        assertAdmin(userRole);
+        return ResponseEntity.ok(menuService.uploadItemImage(id, image));
+    }
+
+    // ── DELETE /menu/items/{id}/image ─────────────────────────────────────────
+
+    @Operation(
+        summary = "Remove the image from a menu item",
+        description = "Deletes the image from S3 and clears the imageUrl field on the item. No-op if the item has no image. Requires OFFICE_ADMIN role.",
+        security = @SecurityRequirement(name = "Bearer Authentication"))
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Image removed, updated item returned"),
+        @ApiResponse(responseCode = "403", description = "Caller does not have OFFICE_ADMIN role"),
+        @ApiResponse(responseCode = "404", description = "Item not found")
+    })
+    @DeleteMapping("/{id}/image")
+    public ResponseEntity<MenuDtos.MenuItemResponse> removeImage(
+            @Parameter(description = "UUID of the menu item", required = true)
+            @PathVariable String id,
+            @Parameter(hidden = true) @RequestHeader("X-User-Role") String userRole) {
+        assertAdmin(userRole);
+        return ResponseEntity.ok(menuService.removeItemImage(id));
     }
 
     // ── Helper ────────────────────────────────────────────────────────────────
