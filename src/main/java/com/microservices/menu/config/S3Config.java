@@ -23,7 +23,7 @@ public class S3Config {
 
     @Bean
     public S3Client s3Client() {
-        S3Client.Builder builder = S3Client.builder().region(Region.of(region));
+        var builder = S3Client.builder().region(Region.of(region));
 
         if (accessKeyId != null && !accessKeyId.isBlank()
                 && secretKey != null && !secretKey.isBlank()) {
