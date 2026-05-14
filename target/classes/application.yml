@@ -64,7 +64,7 @@ logging:
 app:
   ai:
     food-suggestions:
-      enabled: ${APP_AI_FOOD_SUGGESTIONS_ENABLED:false}
+      enabled: ${APP_AI_FOOD_SUGGESTIONS_ENABLED:true}
     gemini:
       api-key: ${GEMINI_API_KEY:}
       base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta}

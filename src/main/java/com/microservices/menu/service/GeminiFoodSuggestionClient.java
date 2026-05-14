@@ -36,7 +36,7 @@ public class GeminiFoodSuggestionClient implements FoodSuggestionAiClient {
 
     public GeminiFoodSuggestionClient(
             ObjectMapper objectMapper,
-            @Value("${app.ai.food-suggestions.enabled:false}") boolean enabled,
+            @Value("${app.ai.food-suggestions.enabled:true}") boolean enabled,
             @Value("${app.ai.gemini.api-key:}") String apiKey,
             @Value("${app.ai.gemini.base-url:https://generativelanguage.googleapis.com/v1beta}") String baseUrl,
             @Value("${app.ai.gemini.model:gemini-2.5-flash}") String model,
