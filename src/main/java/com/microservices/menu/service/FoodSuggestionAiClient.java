@@ -8,7 +8,7 @@ import java.util.Optional;
 
 public interface FoodSuggestionAiClient {
 
-    Optional<MenuDtos.FoodSuggestionResponse> suggestFood(
+    Optional<MenuDtos.AiRecommendationResponse> suggestFood(
             MenuDtos.FoodSuggestionRequest request,
             List<MenuItem> activeItems,
             List<String> missingQuestions

@@ -44,6 +44,7 @@ public class MenuServiceImpl implements MenuService {
     @Autowired private ObjectMapper objectMapper;
     @Autowired private S3Service s3Service;
     @Autowired(required = false) private FoodSuggestionAiClient foodSuggestionAiClient;
+    @Autowired private RuleBasedRecommendationService ruleBasedRecommendationService;
 
     // ── Menu Items ────────────────────────────────────────────────────────────
 
@@ -244,60 +245,58 @@ public class MenuServiceImpl implements MenuService {
 
     @Override
     @Transactional(readOnly = true)
-    public MenuDtos.FoodSuggestionResponse suggestFood(MenuDtos.FoodSuggestionRequest request) {
+    public MenuDtos.AiRecommendationResponse suggestFood(MenuDtos.FoodSuggestionRequest request) {
         List<String> questions = missingSuggestionQuestions(request);
         if (!questions.isEmpty()) {
-            Optional<MenuDtos.FoodSuggestionResponse> aiQuestionResponse =
+            Optional<MenuDtos.AiRecommendationResponse> aiQuestionResponse =
                     suggestFoodWithAi(request, List.of(), questions);
             if (aiQuestionResponse.isPresent()) {
                 return aiQuestionResponse.get();
             }
-            return new MenuDtos.FoodSuggestionResponse(
+            return new MenuDtos.AiRecommendationResponse(
+                    "NONE", false,
                     "I can help you choose something good. Answer these first so I can narrow the menu.",
-                    false,
-                    questions,
-                    List.of(),
+                    false, questions, List.of(),
                     BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)
             );
         }
 
         List<MenuItem> activeItems = menuItemRepository.findByActiveTrue();
         if (activeItems.isEmpty()) {
-            return new MenuDtos.FoodSuggestionResponse(
+            return new MenuDtos.AiRecommendationResponse(
+                    "NONE", false,
                     "I could not find any available menu items right now.",
-                    true,
-                    List.of(),
-                    List.of(),
+                    true, List.of(), List.of(),
                     BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)
             );
         }
 
-        Optional<MenuDtos.FoodSuggestionResponse> aiSuggestionResponse =
-                suggestFoodWithAi(request, activeItems, questions);
-        return aiSuggestionResponse.orElseGet(() -> new MenuDtos.FoodSuggestionResponse(
-                "AI suggestions are currently unavailable. Please try again in a moment.",
-                false,
-                List.of(),
-                List.of(),
-                BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)
-        ));
+        // Try Gemini first, fall back to rule-based engine on any failure
+        Optional<MenuDtos.AiRecommendationResponse> aiResponse = suggestFoodWithAi(request, activeItems, questions);
+        if (aiResponse.isPresent()) {
+            return aiResponse.get();
+        }
+
+        log.info("Gemini unavailable — invoking rule-based recommendation engine");
+        MenuDtos.AiRecommendationResponse ruleBasedResponse = ruleBasedRecommendationService.recommend(request, activeItems);
+        return ruleBasedResponse;
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private Optional<MenuDtos.FoodSuggestionResponse> suggestFoodWithAi(
+    private Optional<MenuDtos.AiRecommendationResponse> suggestFoodWithAi(
             MenuDtos.FoodSuggestionRequest request,
             List<MenuItem> activeItems,
             List<String> missingQuestions
     ) {
         if (foodSuggestionAiClient == null) {
-            log.error("FoodSuggestionAiClient bean is null — check OpenAI configuration (OPENAI_API_KEY, APP_AI_FOOD_SUGGESTIONS_ENABLED)");
+            log.warn("FoodSuggestionAiClient bean is null — GEMINI_API_KEY may not be set");
             return Optional.empty();
         }
         try {
             return foodSuggestionAiClient.suggestFood(request, activeItems, missingQuestions);
         } catch (Exception e) {
-            log.error("AI food suggestion failed ({}): {}", e.getClass().getSimpleName(), e.getMessage());
+            log.error("Gemini food suggestion failed ({}): {}", e.getClass().getSimpleName(), e.getMessage());
             return Optional.empty();
         }
     }

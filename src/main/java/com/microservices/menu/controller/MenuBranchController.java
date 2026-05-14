@@ -49,7 +49,7 @@ public class MenuBranchController {
         @ApiResponse(responseCode = "200", description = "Questions or ranked menu suggestions")
     })
     @PostMapping("/suggestions")
-    public ResponseEntity<MenuDtos.FoodSuggestionResponse> suggestFood(
+    public ResponseEntity<MenuDtos.AiRecommendationResponse> suggestFood(
             @RequestBody MenuDtos.FoodSuggestionRequest request) {
         log.info("POST /menu/suggestions branchId={}", request != null ? request.branchId() : null);
         return ResponseEntity.ok(menuService.suggestFood(request));

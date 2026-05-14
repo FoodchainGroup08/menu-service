@@ -1,5 +1,7 @@
 /Users/ubaydah/Desktop/menu-service/src/main/java/com/microservices/menu/entity/MenuCategory.java
+/Users/ubaydah/Desktop/menu-service/src/main/java/com/microservices/menu/config/S3Config.java
 /Users/ubaydah/Desktop/menu-service/src/main/java/com/microservices/menu/dtos/MenuDtos.java
+/Users/ubaydah/Desktop/menu-service/src/main/java/com/microservices/menu/service/S3Service.java
 /Users/ubaydah/Desktop/menu-service/src/main/java/com/microservices/menu/config/SecurityConfig.java
 /Users/ubaydah/Desktop/menu-service/src/main/java/com/microservices/menu/config/OpenApiConfig.java
 /Users/ubaydah/Desktop/menu-service/src/main/java/com/microservices/menu/entity/MenuItem.java
@@ -7,12 +9,14 @@
 /Users/ubaydah/Desktop/menu-service/src/main/java/com/microservices/menu/service/FoodSuggestionAiClient.java
 /Users/ubaydah/Desktop/menu-service/src/main/java/com/microservices/menu/service/MenuServiceImpl.java
 /Users/ubaydah/Desktop/menu-service/src/main/java/com/microservices/menu/dtos/BaseResponse.java
+/Users/ubaydah/Desktop/menu-service/src/main/java/com/microservices/menu/service/GeminiFoodSuggestionClient.java
 /Users/ubaydah/Desktop/menu-service/src/main/java/com/microservices/menu/MenuServiceApplication.java
 /Users/ubaydah/Desktop/menu-service/src/main/java/com/microservices/menu/controller/MenuBranchController.java
+/Users/ubaydah/Desktop/menu-service/src/main/java/com/microservices/menu/service/RuleBasedRecommendationService.java
 /Users/ubaydah/Desktop/menu-service/src/main/java/com/microservices/menu/controller/MenuItemController.java
 /Users/ubaydah/Desktop/menu-service/src/main/java/com/microservices/menu/repository/MenuItemRepository.java
-/Users/ubaydah/Desktop/menu-service/src/main/java/com/microservices/menu/service/OpenAiFoodSuggestionClient.java
 /Users/ubaydah/Desktop/menu-service/src/main/java/com/microservices/menu/exception/GlobalExceptionHandler.java
 /Users/ubaydah/Desktop/menu-service/src/main/java/com/microservices/menu/filter/GatewayAuthenticationFilter.java
 /Users/ubaydah/Desktop/menu-service/src/main/java/com/microservices/menu/controller/MenuCategoryController.java
+/Users/ubaydah/Desktop/menu-service/src/main/java/com/microservices/menu/service/NutritionScoringService.java
 /Users/ubaydah/Desktop/menu-service/src/main/java/com/microservices/menu/repository/MenuCategoryRepository.java

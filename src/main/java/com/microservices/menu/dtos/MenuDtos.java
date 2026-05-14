@@ -111,4 +111,30 @@ public class MenuDtos {
             BigDecimal estimatedTotalCost,
             List<String> optionalAddOns
     ) {}
+
+    public record ComboItem(
+            String menuItemId,
+            String name,
+            BigDecimal price
+    ) {}
+
+    public record ComboSuggestion(
+            String comboName,
+            List<ComboItem> items,
+            BigDecimal totalPrice,
+            int healthScore,
+            List<String> wellnessTags,
+            String reason,
+            double confidence
+    ) {}
+
+    public record AiRecommendationResponse(
+            String recommendationSource,
+            boolean fallbackUsed,
+            String message,
+            boolean readyForSuggestions,
+            List<String> questions,
+            List<ComboSuggestion> suggestions,
+            BigDecimal estimatedTotalCost
+    ) {}
 }

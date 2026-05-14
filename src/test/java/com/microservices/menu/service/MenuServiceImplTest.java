@@ -52,6 +52,9 @@ class MenuServiceImplTest {
     @Mock
     private ValueOperations<String, String> valueOps;
 
+    @Mock
+    private RuleBasedRecommendationService ruleBasedRecommendationService;
+
     @Spy
     private ObjectMapper objectMapper = new ObjectMapper()
             .registerModule(new JavaTimeModule())
@@ -543,7 +546,7 @@ class MenuServiceImplTest {
 
         @Test
         void incompleteRequest_returnsGuidingQuestions() {
-            MenuDtos.FoodSuggestionResponse result = menuService.suggestFood(
+            MenuDtos.AiRecommendationResponse result = menuService.suggestFood(
                     new MenuDtos.FoodSuggestionRequest(null, null, null, null, null, List.of(), null, null, null));
 
             assertThat(result.readyForSuggestions()).isFalse();
@@ -556,7 +559,7 @@ class MenuServiceImplTest {
         }
 
         @Test
-        void completeRequest_returnsRankedSuggestionsWithinBudget() {
+        void completeRequest_whenGeminiUnavailable_usesRuleBasedFallback() {
             MenuCategory mains = MenuCategory.builder()
                     .id("cat-1").name("Mains").displayOrder(1).active(true).build();
             MenuItem jollof = MenuItem.builder()
@@ -570,27 +573,51 @@ class MenuServiceImplTest {
                     .active(true).build();
             when(menuItemRepository.findByActiveTrue()).thenReturn(List.of(cake, jollof));
 
-            MenuDtos.FoodSuggestionRequest request = new MenuDtos.FoodSuggestionRequest(
-                    "branch-1",
-                    "Lekki Branch",
-                    new BigDecimal("3000.00"),
-                    "lunch",
-                    "heavy",
-                    List.of("spicy", "high protein"),
-                    1,
-                    "delivery",
-                    3
-            );
+            MenuDtos.AiRecommendationResponse mockRuleResponse = new MenuDtos.AiRecommendationResponse(
+                    "RULE_BASED", true,
+                    "Here are balanced combo recommendations.",
+                    true, List.of(),
+                    List.of(new MenuDtos.ComboSuggestion(
+                            "Balanced Meal Combo",
+                            List.of(new MenuDtos.ComboItem("item-1", "Spicy Jollof Rice", new BigDecimal("1500.00"))),
+                            new BigDecimal("1500.00"), 72,
+                            List.of("Balanced", "High Protein"),
+                            "Spicy Jollof Rice leads this combo within your budget.",
+                            0.83)),
+                    new BigDecimal("1500.00"));
+            when(ruleBasedRecommendationService.recommend(any(), any())).thenReturn(mockRuleResponse);
 
-            MenuDtos.FoodSuggestionResponse result = menuService.suggestFood(request);
+            MenuDtos.FoodSuggestionRequest request = new MenuDtos.FoodSuggestionRequest(
+                    "branch-1", "Lekki Branch",
+                    new BigDecimal("3000.00"), "lunch", "heavy",
+                    List.of("spicy", "high protein"), 1, "delivery", 3);
+
+            MenuDtos.AiRecommendationResponse result = menuService.suggestFood(request);
 
             assertThat(result.readyForSuggestions()).isTrue();
+            assertThat(result.fallbackUsed()).isTrue();
+            assertThat(result.recommendationSource()).isEqualTo("RULE_BASED");
             assertThat(result.questions()).isEmpty();
-            assertThat(result.suggestions()).hasSize(2);
-            assertThat(result.suggestions().get(0).menuItemName()).isEqualTo("Spicy Jollof Rice");
-            assertThat(result.suggestions().get(0).branchName()).isEqualTo("Lekki Branch");
-            assertThat(result.suggestions().get(0).estimatedTotalCost()).isEqualByComparingTo("1500.00");
-            assertThat(result.suggestions().get(0).reason()).contains("fits your budget");
+            assertThat(result.suggestions()).hasSize(1);
+            assertThat(result.suggestions().get(0).comboName()).isEqualTo("Balanced Meal Combo");
+            assertThat(result.suggestions().get(0).items().get(0).name()).isEqualTo("Spicy Jollof Rice");
+            assertThat(result.suggestions().get(0).healthScore()).isEqualTo(72);
+        }
+
+        @Test
+        void emptyMenu_returnsNotReadyResponse() {
+            when(menuItemRepository.findByActiveTrue()).thenReturn(List.of());
+
+            MenuDtos.FoodSuggestionRequest request = new MenuDtos.FoodSuggestionRequest(
+                    "branch-1", "Lekki Branch",
+                    new BigDecimal("3000.00"), "lunch", "heavy",
+                    List.of("spicy"), 1, "delivery", 3);
+
+            MenuDtos.AiRecommendationResponse result = menuService.suggestFood(request);
+
+            assertThat(result.readyForSuggestions()).isTrue();
+            assertThat(result.suggestions()).isEmpty();
+            verifyNoInteractions(ruleBasedRecommendationService);
         }
     }
 

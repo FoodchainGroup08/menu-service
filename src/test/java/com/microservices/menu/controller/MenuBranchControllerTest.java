@@ -105,21 +105,18 @@ class MenuBranchControllerTest {
     }
 
     @Test
-    void suggestFood_returnsSuggestions_200() throws Exception {
-        MenuDtos.FoodSuggestionResponse response = new MenuDtos.FoodSuggestionResponse(
-                "Here are my best picks from the available menu.",
-                true,
-                List.of(),
-                List.of(new MenuDtos.FoodSuggestionItem(
-                        "item-1",
-                        "Jollof Rice",
-                        new BigDecimal("1500.00"),
-                        "fits your budget",
-                        "branch-1",
-                        "Lekki Branch",
-                        new BigDecimal("1500.00"),
-                        List.of("Add a drink")
-                )),
+    void suggestFood_returnsCombos_200() throws Exception {
+        MenuDtos.AiRecommendationResponse response = new MenuDtos.AiRecommendationResponse(
+                "RULE_BASED", true,
+                "Here are balanced combo recommendations.",
+                true, List.of(),
+                List.of(new MenuDtos.ComboSuggestion(
+                        "Balanced Meal Combo",
+                        List.of(new MenuDtos.ComboItem("item-1", "Jollof Rice", new BigDecimal("1500.00"))),
+                        new BigDecimal("1500.00"), 72,
+                        List.of("Balanced", "High Protein"),
+                        "A nutritious combo within your budget.",
+                        0.83)),
                 new BigDecimal("1500.00")
         );
         when(menuService.suggestFood(any(MenuDtos.FoodSuggestionRequest.class))).thenReturn(response);
@@ -140,9 +137,12 @@ class MenuBranchControllerTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.readyForSuggestions").value(true))
-                .andExpect(jsonPath("$.suggestions[0].menuItemName").value("Jollof Rice"))
-                .andExpect(jsonPath("$.suggestions[0].branchName").value("Lekki Branch"))
-                .andExpect(jsonPath("$.suggestions[0].estimatedTotalCost").value(1500.00));
+                .andExpect(jsonPath("$.recommendationSource").value("RULE_BASED"))
+                .andExpect(jsonPath("$.fallbackUsed").value(true))
+                .andExpect(jsonPath("$.suggestions[0].comboName").value("Balanced Meal Combo"))
+                .andExpect(jsonPath("$.suggestions[0].healthScore").value(72))
+                .andExpect(jsonPath("$.suggestions[0].items[0].name").value("Jollof Rice"))
+                .andExpect(jsonPath("$.suggestions[0].wellnessTags[0]").value("Balanced"));
 
         verify(menuService).suggestFood(any(MenuDtos.FoodSuggestionRequest.class));
     }
