@@ -77,12 +77,17 @@ public class GeminiFoodSuggestionClient implements FoodSuggestionAiClient {
 
         try {
             Map<String, Object> geminiRequest = buildGeminiRequest(request, activeItems, missingQuestions);
-            JsonNode response = restClient.post()
+            String rawResponse = restClient.post()
                     .uri("/models/" + model + ":generateContent?key=" + apiKey)
                     .contentType(MediaType.APPLICATION_JSON)
+                    .accept(MediaType.ALL)
                     .body(geminiRequest)
                     .retrieve()
-                    .body(JsonNode.class);
+                    .body(String.class);
+
+            JsonNode response = (rawResponse == null || rawResponse.isBlank())
+                    ? null
+                    : objectMapper.readTree(rawResponse);
 
             String content = response == null
                     ? ""
