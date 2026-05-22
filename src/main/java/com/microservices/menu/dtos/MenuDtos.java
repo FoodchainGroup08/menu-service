@@ -137,4 +137,22 @@ public class MenuDtos {
             List<ComboSuggestion> suggestions,
             BigDecimal estimatedTotalCost
     ) {}
+
+    // ── v2 Recommendation ─────────────────────────────────────────────────────
+
+    public record RecommendationRequestV2(
+            String branchId,
+            String branchName,
+            BigDecimal budget,
+            Boolean budgetUnlimited,
+            String appetite,
+            String mealType,
+            String fulfillmentType,
+            Integer peopleCount,
+            Integer limit,
+            List<String> dietaryRestrictions,
+            List<String> cuisinePreferences,
+            String spiceLevel,
+            List<String> moods
+    ) {}
 }
