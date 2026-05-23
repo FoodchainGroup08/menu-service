@@ -252,8 +252,8 @@ public class RecommendationEngineV2 {
         // Main + side + drink combos
         for (int i = 0; i < mains.size() && combos.size() < limit; i++) {
             MenuItem main  = mains.get(i);
-            MenuItem side  = sides.isEmpty()  ? null : sides.get(Math.min(i, sides.size()  - 1));
-            MenuItem drink = drinks.isEmpty() ? null : drinks.get(Math.min(i, drinks.size() - 1));
+            MenuItem side  = sides.isEmpty()  ? null : sides.get(i % sides.size());
+            MenuItem drink = drinks.isEmpty() ? null : drinks.get(i % drinks.size());
 
             List<MenuItem> items = new ArrayList<>();
             items.add(main);
@@ -262,7 +262,7 @@ public class RecommendationEngineV2 {
 
             BigDecimal total = sumPrices(items);
             if (passesBudget(total, request)) {
-                combos.add(toCombo(comboName(request, i), items, total, people));
+                combos.add(toCombo(comboName(request, main), items, total, people));
             }
         }
 
@@ -292,14 +292,18 @@ public class RecommendationEngineV2 {
 
         // Single-item fallbacks if combos are still sparse
         if (combos.size() < limit) {
+            Set<String> usedNames = combos.stream()
+                    .map(MenuDtos.ComboSuggestion::comboName)
+                    .collect(Collectors.toSet());
             sorted.stream()
                     .filter(i -> passesBudget(money(i.getBasePrice()), request))
+                    .filter(i -> !usedNames.contains(comboName(request, i)))
                     .limit(limit - combos.size())
                     .forEach(item -> {
                         BigDecimal price = money(item.getBasePrice());
                         int score = nutritionScoringService.scoreItem(item);
                         combos.add(new MenuDtos.ComboSuggestion(
-                                item.getName(),
+                                comboName(request, item),
                                 List.of(new MenuDtos.ComboItem(item.getId(), item.getName(), price)),
                                 price,
                                 score,
@@ -310,16 +314,7 @@ public class RecommendationEngineV2 {
                     });
         }
 
-        return combos.stream()
-                .collect(Collectors.toMap(
-                        MenuDtos.ComboSuggestion::comboName,
-                        c -> c,
-                        (a, b) -> a.healthScore() >= b.healthScore() ? a : b,
-                        LinkedHashMap::new))
-                .values()
-                .stream()
-                .limit(limit)
-                .collect(Collectors.toList());
+        return combos.stream().limit(limit).collect(Collectors.toList());
     }
 
     private MenuDtos.ComboSuggestion toCombo(
@@ -371,17 +366,17 @@ public class RecommendationEngineV2 {
         return roles;
     }
 
-    private String comboName(MenuDtos.RecommendationRequestV2 req, int index) {
+    private String comboName(MenuDtos.RecommendationRequestV2 req, MenuItem main) {
+        String base = main.getName() == null ? "Special" :
+                      main.getName().substring(0, 1).toUpperCase() + main.getName().substring(1);
         String mt = req.mealType();
-        String ap = req.appetite();
         int    pc = req.peopleCount() != null ? req.peopleCount() : 1;
-        if ("breakfast".equalsIgnoreCase(mt)) return index == 0 ? "Healthy Breakfast Combo" : "Morning Favourite";
-        if ("dinner".equalsIgnoreCase(mt))    return index == 0 ? "Satisfying Dinner Combo"  : "Evening Meal Combo";
-        if ("snack".equalsIgnoreCase(mt))     return "Light Snack Combo";
-        if ("dessert".equalsIgnoreCase(mt))   return "Sweet Treat Combo";
-        if (pc >= 4)                          return index == 0 ? "Family Feast Combo"         : "Family Meal Combo";
-        if ("light".equalsIgnoreCase(ap))     return "Light Meal Combo";
-        return index == 0 ? "Top Pick Combo" : "Chef's Recommendation";
+        if ("breakfast".equalsIgnoreCase(mt)) return base + " Breakfast";
+        if ("dinner".equalsIgnoreCase(mt))    return base + " Dinner";
+        if ("snack".equalsIgnoreCase(mt))     return base + " Snack";
+        if ("dessert".equalsIgnoreCase(mt))   return base + " Treat";
+        if (pc >= 4)                          return base + " Family Combo";
+        return base + " Combo";
     }
 
     private String buildMessage(MenuDtos.RecommendationRequestV2 req, int people) {
